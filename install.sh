@@ -26,17 +26,6 @@ check_cmd python3 "sudo apt install python3" || missing=1
 check_cmd pip "sudo apt install python3-pip" || missing=1
 check_cmd cmake "sudo apt install cmake" || missing=1
 
-# Display server tools
-if [ "${XDG_SESSION_TYPE:-}" = "wayland" ] || [ -n "${WAYLAND_DISPLAY:-}" ]; then
-    echo "  Detected: Wayland"
-    check_cmd wl-copy "sudo apt install wl-clipboard" || missing=1
-    check_cmd wtype "sudo apt install wtype" || missing=1
-else
-    echo "  Detected: X11"
-    check_cmd xclip "sudo apt install xclip" || missing=1
-    check_cmd xdotool "sudo apt install xdotool" || missing=1
-fi
-
 check_cmd notify-send "sudo apt install libnotify-bin" || true
 
 # PortAudio
@@ -78,7 +67,7 @@ if [ "$missing" -eq 1 ]; then
     echo "For Debian/Ubuntu:"
     echo "  sudo apt install python3 python3-pip cmake extra-cmake-modules \\"
     echo "    libfcitx5core-dev libportaudio2 portaudio19-dev \\"
-    echo "    xclip xdotool libnotify-bin"
+    echo "    libnotify-bin"
     echo
     exit 1
 fi
@@ -89,7 +78,7 @@ echo
 echo "Building fcitx5 addon..."
 BUILD_DIR="$SCRIPT_DIR/build"
 mkdir -p "$BUILD_DIR"
-cmake -S "$SCRIPT_DIR" -B "$BUILD_DIR" -DCMAKE_BUILD_TYPE=Release
+cmake -S "$SCRIPT_DIR" -B "$BUILD_DIR" -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr
 cmake --build "$BUILD_DIR"
 
 echo
@@ -120,6 +109,7 @@ ExecStart=$(command -v watson-voice)
 Restart=on-failure
 RestartSec=5
 Environment=DISPLAY=:0
+Environment=PYTHONUNBUFFERED=1
 
 [Install]
 WantedBy=default.target

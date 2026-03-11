@@ -19,27 +19,14 @@ class Config:
     # FIFO path for fcitx5 addon communication
     fifo_path: str = ""
 
-    # Text input method: "clipboard" (recommended) or "xdotool"
-    input_method: str = "clipboard"
-
-    # Display environment: "x11" or "wayland" (auto-detected)
-    display_server: str = ""
+    # FIFO path for sending results back to fcitx5 addon
+    result_fifo_path: str = ""
 
     def __post_init__(self):
-        if not self.display_server:
-            self.display_server = _detect_display_server()
         if not self.fifo_path:
             self.fifo_path = _default_fifo_path()
-
-
-def _detect_display_server() -> str:
-    """Detect whether running on X11 or Wayland."""
-    xdg_session = os.environ.get("XDG_SESSION_TYPE", "")
-    if "wayland" in xdg_session.lower():
-        return "wayland"
-    if os.environ.get("WAYLAND_DISPLAY", ""):
-        return "wayland"
-    return "x11"
+        if not self.result_fifo_path:
+            self.result_fifo_path = _default_result_fifo_path()
 
 
 def _default_fifo_path() -> str:
@@ -48,6 +35,14 @@ def _default_fifo_path() -> str:
     if runtime:
         return os.path.join(runtime, "watson-voice.fifo")
     return f"/tmp/watson-voice-{os.getuid()}.fifo"
+
+
+def _default_result_fifo_path() -> str:
+    """Return the default result FIFO path."""
+    runtime = os.environ.get("XDG_RUNTIME_DIR")
+    if runtime:
+        return os.path.join(runtime, "watson-voice-result.fifo")
+    return f"/tmp/watson-voice-result-{os.getuid()}.fifo"
 
 
 def parse_args() -> Config:
@@ -78,21 +73,14 @@ def parse_args() -> Config:
         help="Language code for ASR (default: %(default)s)",
     )
     parser.add_argument(
-        "--input-method",
-        default=Config.input_method,
-        choices=["clipboard", "xdotool"],
-        help="Text input method (default: %(default)s)",
-    )
-    parser.add_argument(
-        "--display-server",
-        default="",
-        choices=["x11", "wayland", ""],
-        help="Display server (auto-detected if empty)",
-    )
-    parser.add_argument(
         "--fifo-path",
         default="",
         help="FIFO path for fcitx5 addon communication (auto-determined)",
+    )
+    parser.add_argument(
+        "--result-fifo-path",
+        default="",
+        help="Result FIFO path for sending text back to fcitx5 (auto-determined)",
     )
     args = parser.parse_args()
 
@@ -101,7 +89,6 @@ def parse_args() -> Config:
         device=args.device,
         compute_type=args.compute_type,
         language=args.language,
-        input_method=args.input_method,
-        display_server=args.display_server,
         fifo_path=args.fifo_path,
+        result_fifo_path=args.result_fifo_path,
     )

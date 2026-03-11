@@ -29,7 +29,7 @@ class VoiceInputDaemon:
         self.config = config
         self.asr = ASREngine(config)
         self.recorder = AudioRecorder(config)
-        self.typer = TextTyper(config)
+        self.typer = TextTyper(config.result_fifo_path)
         self._processing = False
         self._lock = threading.Lock()
         self._running = True
@@ -39,8 +39,8 @@ class VoiceInputDaemon:
         print("Watson Voice Daemon")
         print(f"Model: {self.config.model_name}")
         print(f"Device: {self.config.device} ({self.config.compute_type})")
-        print(f"Display: {self.config.display_server}")
         print(f"FIFO: {self.config.fifo_path}")
+        print(f"Result FIFO: {self.config.result_fifo_path}")
         print()
 
         # Pre-load the model
