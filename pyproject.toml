@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.backends._legacy:_Backend"
+
+[project]
+name = "watson-voice"
+version = "0.1.0"
+description = "Voice input method for Linux using MR Breeze ASR 25 with NVIDIA GPU acceleration"
+requires-python = ">=3.10"
+dependencies = [
+    "faster-whisper>=1.0.0",
+    "sounddevice>=0.4.6",
+    "numpy>=1.24.0",
+]
+
+[project.scripts]
+watson-voice = "watson_voice.__main__:main"
+
+[tool.setuptools.packages.find]
+include = ["watson_voice*"]
