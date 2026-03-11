@@ -30,6 +30,7 @@ class VoiceInputDaemon:
         self.asr = ASREngine(config)
         self.recorder = AudioRecorder(config)
         self.typer = TextTyper(config.result_fifo_path)
+        self._active = False  # Whether voice input mode is active
         self._processing = False
         self._lock = threading.Lock()
         self._running = True
@@ -74,8 +75,6 @@ class VoiceInputDaemon:
         """Read commands from FIFO in a loop."""
         while self._running:
             try:
-                # Open FIFO for reading; blocks until a writer opens it.
-                # Re-opens automatically when the writer closes.
                 with open(self.config.fifo_path, "r") as f:
                     for line in f:
                         cmd = line.strip()
@@ -92,32 +91,62 @@ class VoiceInputDaemon:
         print(f"Command: {cmd}")
 
         if cmd == "start":
-            self._start_recording()
+            self._activate()
         elif cmd == "stop":
-            self._stop_and_transcribe()
+            self._deactivate()
         elif cmd == "cancel":
-            self._cancel_recording()
+            self._cancel()
         else:
             print(f"Unknown command: {cmd}")
 
+    def _activate(self):
+        """Activate voice input mode - start recording with auto-detection."""
+        self._active = True
+        self._start_recording()
+
+    def _deactivate(self):
+        """Deactivate voice input mode - stop and transcribe remaining audio."""
+        self._active = False
+        self._stop_and_transcribe()
+
+    def _cancel(self):
+        """Cancel everything."""
+        self._active = False
+        if self.recorder.is_recording:
+            self.recorder.stop()
+            print("Recording cancelled.")
+
     def _start_recording(self):
-        """Start audio recording."""
+        """Start recording with silence detection."""
         with self._lock:
             if self._processing:
                 return
-            # If already recording (e.g. rapid switch), stop first
             if self.recorder.is_recording:
                 self.recorder.stop()
 
         print("Recording started...")
-        self.recorder.start()
+        self.recorder.start(on_silence=self._on_silence_detected)
+
+    def _on_silence_detected(self):
+        """Called by recorder when silence is detected after speech."""
+        print("Auto-stop triggered by silence detection.")
+        # Must not call stop()/join() from the recorder thread itself,
+        # so handle transcription in a new thread.
+        threading.Thread(target=self._do_transcribe, daemon=True).start()
 
     def _stop_and_transcribe(self):
-        """Stop recording and transcribe."""
+        """Stop recording and transcribe (manual stop)."""
         with self._lock:
             if self._processing:
                 return
             if not self.recorder.is_recording:
+                return
+        self._do_transcribe()
+
+    def _do_transcribe(self):
+        """Stop recorder and transcribe in a background thread."""
+        with self._lock:
+            if self._processing:
                 return
             self._processing = True
 
@@ -130,31 +159,24 @@ class VoiceInputDaemon:
             ).start()
         else:
             print("No audio recorded.")
-            _notify("No speech", "No audio was captured.")
             with self._lock:
                 self._processing = False
-
-    def _cancel_recording(self):
-        """Cancel recording without transcribing."""
-        if self.recorder.is_recording:
-            self.recorder.stop()
-            print("Recording cancelled.")
+            # If still active, restart recording
+            if self._active:
+                self._start_recording()
 
     def _transcribe_and_type(self, audio_path: str):
-        """Transcribe audio and type the result."""
+        """Transcribe audio and type the result, then restart if still active."""
         try:
-            _notify("Recognizing...", "Processing speech...")
             text = self.asr.transcribe(audio_path)
 
             if text:
                 self.typer.type_text(text)
-                _notify("Done", text[:100])
+                print(f"Committed: {text}")
             else:
                 print("No speech detected in audio.")
-                _notify("No speech detected")
         except Exception as e:
             print(f"Transcription error: {e}")
-            _notify("Error", str(e)[:100])
         finally:
             with self._lock:
                 self._processing = False
@@ -163,13 +185,18 @@ class VoiceInputDaemon:
             except OSError:
                 pass
 
+            # If still in voice input mode, restart recording for next utterance
+            if self._active:
+                print("Restarting recording...")
+                self._start_recording()
+
     def _handle_signal(self, signum, frame):
         """Handle shutdown signals."""
         print(f"\nReceived signal {signum}, shutting down...")
         self._running = False
+        self._active = False
         if self.recorder.is_recording:
             self.recorder.stop()
-        # Clean up FIFO
         try:
             os.unlink(self.config.fifo_path)
         except OSError:
