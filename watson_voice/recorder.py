@@ -15,6 +15,9 @@ ENERGY_THRESHOLD = 300  # RMS energy threshold to detect speech
 SILENCE_DURATION_S = 1.5  # Seconds of silence after speech to trigger stop
 MIN_SPEECH_DURATION_S = 0.3  # Minimum speech duration to consider valid
 
+# High-pass filter cutoff frequency (Hz) to remove wind/AC noise
+HIGHPASS_CUTOFF_HZ = 300
+
 
 class AudioRecorder:
     """Records audio with automatic silence detection."""
@@ -30,6 +33,14 @@ class AudioRecorder:
     @property
     def is_recording(self) -> bool:
         return self._recording
+
+    @staticmethod
+    def _highpass_filter(frame: np.ndarray, sample_rate: int) -> np.ndarray:
+        """Apply a high-pass filter via FFT to remove low-frequency noise."""
+        spectrum = np.fft.rfft(frame.astype(np.float32))
+        freqs = np.fft.rfftfreq(len(frame), d=1.0 / sample_rate)
+        spectrum[freqs < HIGHPASS_CUTOFF_HZ] = 0
+        return np.fft.irfft(spectrum, n=len(frame)).astype(np.int16)
 
     def start(self, on_silence: Callable[[], None] | None = None):
         """Start recording. on_silence is called when speech followed by silence is detected."""
@@ -74,6 +85,7 @@ class AudioRecorder:
                 while self._recording:
                     data, _ = stream.read(frame_size)
                     frame = data.flatten().copy()
+                    frame = self._highpass_filter(frame, self.sample_rate)
                     self._frames.append(frame)
 
                     # Compute RMS energy
