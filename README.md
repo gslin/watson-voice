@@ -130,6 +130,10 @@ sleep 3
 echo "stop" > "${XDG_RUNTIME_DIR}/watson-voice.fifo"
 ```
 
+## 開發工具
+
+本專案使用 [Claude Code](https://claude.com/claude-code) 輔助開發。
+
 ## 授權
 
 MIT
