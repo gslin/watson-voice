@@ -43,7 +43,8 @@ class ASREngine:
                 min_silence_duration_ms=500,
             ),
         )
-        text = "".join(segment.text for segment in segments).strip()
+        texts = [segment.text.strip() for segment in segments]
+        text = " ".join(t for t in texts if t)
         elapsed = time.time() - t0
         print(f"Transcription ({elapsed:.1f}s): {text}")
         return text
