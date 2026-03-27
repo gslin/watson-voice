@@ -55,6 +55,16 @@ void ensureFifo(const std::string &path) {
     }
 }
 
+bool isShiftSym(fcitx::KeySym sym) {
+    return sym == FcitxKey_Shift_L || sym == FcitxKey_Shift_R;
+}
+
+bool isBareShiftKey(const fcitx::Key &key) {
+    return isShiftSym(key.sym()) &&
+           !key.states().unset(fcitx::KeyState::Shift)
+                .testAny(fcitx::KeyState::SimpleMask);
+}
+
 } // anonymous namespace
 
 class WatsonVoiceEngine : public fcitx::InputMethodEngineV2 {
@@ -69,6 +79,7 @@ public:
 
     void activate(const fcitx::InputMethodEntry & /*entry*/,
                   fcitx::InputContextEvent &event) override {
+        clearPendingShift();
         lastIC_ = event.inputContext();
         sendCommand("start");
         auto *ic = event.inputContext();
@@ -81,6 +92,7 @@ public:
 
     void deactivate(const fcitx::InputMethodEntry & /*entry*/,
                     fcitx::InputContextEvent &event) override {
+        clearPendingShift();
         sendCommand("stop");
         auto *ic = event.inputContext();
         ic->inputPanel().reset();
@@ -90,7 +102,20 @@ public:
 
     void keyEvent(const fcitx::InputMethodEntry & /*entry*/,
                   fcitx::KeyEvent &keyEvent) override {
+        const auto sym = keyEvent.rawKey().sym();
+
+        if (pendingShift_) {
+            if (keyEvent.isRelease() && sym == pendingShiftSym_) {
+                clearPendingShift();
+                sendCommand("segment");
+                keyEvent.filterAndAccept();
+                return;
+            }
+            clearPendingShift();
+        }
+
         if (keyEvent.key().check(FcitxKey_Escape) && !keyEvent.isRelease()) {
+            clearPendingShift();
             sendCommand("cancel");
             if (instance_->inputMethodManager().groupCount() > 0) {
                 instance_->toggle();
@@ -98,10 +123,17 @@ public:
             keyEvent.filterAndAccept();
             return;
         }
+
+        if (!keyEvent.isRelease() && isBareShiftKey(keyEvent.rawKey())) {
+            pendingShift_ = true;
+            pendingShiftSym_ = sym;
+            return;
+        }
     }
 
     void reset(const fcitx::InputMethodEntry & /*entry*/,
                fcitx::InputContextEvent &event) override {
+        clearPendingShift();
         auto *ic = event.inputContext();
         ic->inputPanel().reset();
         ic->updateUserInterface(
@@ -114,6 +146,13 @@ private:
     int resultFd_ = -1;
     std::unique_ptr<fcitx::EventSourceIO> ioEvent_;
     std::string resultBuf_;
+    bool pendingShift_ = false;
+    fcitx::KeySym pendingShiftSym_ = FcitxKey_None;
+
+    void clearPendingShift() {
+        pendingShift_ = false;
+        pendingShiftSym_ = FcitxKey_None;
+    }
 
     void setupResultFifo() {
         auto path = getResultFifoPath();

@@ -96,6 +96,8 @@ class VoiceInputDaemon:
             self._activate()
         elif cmd == "stop":
             self._deactivate()
+        elif cmd == "segment":
+            self._segment()
         elif cmd == "cancel":
             self._cancel()
         else:
@@ -109,6 +111,10 @@ class VoiceInputDaemon:
     def _deactivate(self):
         """Deactivate voice input mode - stop and transcribe remaining audio."""
         self._active = False
+        self._stop_and_transcribe()
+
+    def _segment(self):
+        """Cut the current utterance, transcribe it, and keep voice mode active."""
         self._stop_and_transcribe()
 
     def _cancel(self):
