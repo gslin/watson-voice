@@ -5,7 +5,8 @@ import signal
 import subprocess
 import threading
 
-from .asr import ASREngine
+import opencc
+
 from .config import Config
 from .recorder import AudioRecorder
 from .typer import TextTyper
@@ -27,8 +28,9 @@ class VoiceInputDaemon:
 
     def __init__(self, config: Config):
         self.config = config
-        self.asr = ASREngine(config)
+        self.asr = _create_asr_engine(config)
         self.recorder = AudioRecorder(config)
+        self._s2t = opencc.OpenCC("s2t")
         self.typer = TextTyper(config.result_fifo_path)
         self._active = False  # Whether voice input mode is active
         self._processing = False
@@ -169,6 +171,7 @@ class VoiceInputDaemon:
         """Transcribe audio and type the result, then restart if still active."""
         try:
             text = self.asr.transcribe(audio_path)
+            text = self._s2t.convert(text)
 
             if text:
                 self.typer.type_text(text)
@@ -208,6 +211,18 @@ class VoiceInputDaemon:
             os.unlink(self.config.fifo_path)
         except OSError:
             pass
+
+
+def _create_asr_engine(config: Config):
+    """Create the appropriate ASR engine based on config."""
+    if config.backend == "voxtral":
+        from .asr_voxtral import VoxtralASREngine
+
+        return VoxtralASREngine(config)
+
+    from .asr import WhisperASREngine
+
+    return WhisperASREngine(config)
 
 
 def _is_fifo(path: str) -> bool:

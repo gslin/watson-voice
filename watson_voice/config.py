@@ -7,11 +7,17 @@ from dataclasses import dataclass
 
 @dataclass
 class Config:
-    # ASR model settings
+    # ASR backend: "whisper" or "voxtral"
+    backend: str = "whisper"
+
+    # ASR model settings (for whisper backend)
     model_name: str = "SoybeanMilk/faster-whisper-Breeze-ASR-25"
     device: str = "cuda"
     compute_type: str = "float16"
     language: str = "zh"
+
+    # Mistral API key (for voxtral backend, or MISTRAL_API_KEY env var)
+    mistral_api_key: str = ""
 
     # Audio recording settings
     sample_rate: int = 16000
@@ -51,6 +57,12 @@ def parse_args() -> Config:
         description="Watson Voice - Voice input daemon for fcitx5"
     )
     parser.add_argument(
+        "--backend",
+        default=Config.backend,
+        choices=["whisper", "voxtral"],
+        help="ASR backend (default: %(default)s)",
+    )
+    parser.add_argument(
         "--model",
         default=Config.model_name,
         help="ASR model name or path (default: %(default)s)",
@@ -73,6 +85,11 @@ def parse_args() -> Config:
         help="Language code for ASR (default: %(default)s)",
     )
     parser.add_argument(
+        "--mistral-api-key",
+        default="",
+        help="Mistral API key for voxtral backend (or set MISTRAL_API_KEY env var)",
+    )
+    parser.add_argument(
         "--fifo-path",
         default="",
         help="FIFO path for fcitx5 addon communication (auto-determined)",
@@ -84,11 +101,15 @@ def parse_args() -> Config:
     )
     args = parser.parse_args()
 
+    api_key = args.mistral_api_key or os.environ.get("MISTRAL_API_KEY", "")
+
     return Config(
+        backend=args.backend,
         model_name=args.model,
         device=args.device,
         compute_type=args.compute_type,
         language=args.language,
+        mistral_api_key=api_key,
         fifo_path=args.fifo_path,
         result_fifo_path=args.result_fifo_path,
     )

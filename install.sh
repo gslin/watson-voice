@@ -105,7 +105,7 @@ After=graphical-session.target
 
 [Service]
 Type=simple
-ExecStart=$(command -v watson-voice)
+ExecStart=$(command -v watson-voice) --backend voxtral
 Restart=on-failure
 RestartSec=5
 Environment=DISPLAY=:0

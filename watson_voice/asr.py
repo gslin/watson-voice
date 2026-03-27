@@ -1,13 +1,22 @@
-"""ASR engine using faster-whisper with Breeze ASR 25."""
+"""ASR engine interface and faster-whisper backend."""
 
 import time
+from typing import Protocol
 
 from faster_whisper import WhisperModel
 
 from .config import Config
 
 
-class ASREngine:
+class ASRBackend(Protocol):
+    """Protocol for ASR backends."""
+
+    def load(self) -> None: ...
+
+    def transcribe(self, audio_path: str) -> str: ...
+
+
+class WhisperASREngine:
     """Speech recognition engine using faster-whisper."""
 
     def __init__(self, config: Config):
