@@ -92,6 +92,22 @@ echo "Installing watson-voice Python package..."
 pip install -e "$SCRIPT_DIR" --break-system-packages 2>/dev/null \
     || pip install -e "$SCRIPT_DIR"
 
+# --- Install optional backend dependencies ---
+
+echo
+echo "Install optional backend dependencies?"
+echo "  1) cohere  - Cohere Transcribe (requires transformers>=5.4.0, torch)"
+echo "  0) skip"
+echo
+read -rp "Choose [0]: " backend_choice
+backend_choice="${backend_choice:-0}"
+
+if [ "$backend_choice" = "1" ]; then
+    echo "Installing cohere backend dependencies..."
+    pip install -e "$SCRIPT_DIR[cohere]" --break-system-packages 2>/dev/null \
+        || pip install -e "$SCRIPT_DIR[cohere]"
+fi
+
 # --- Install systemd user service ---
 
 echo

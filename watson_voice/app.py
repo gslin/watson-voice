@@ -226,6 +226,11 @@ def _create_asr_engine(config: Config):
 
         return VoxtralASREngine(config)
 
+    if config.backend == "cohere":
+        from .asr_cohere import CohereASREngine
+
+        return CohereASREngine(config)
+
     from .asr import WhisperASREngine
 
     return WhisperASREngine(config)

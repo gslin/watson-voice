@@ -14,6 +14,16 @@ dependencies = [
     "numpy>=1.24.0",
 ]
 
+[project.optional-dependencies]
+cohere = [
+    "transformers>=5.4.0",
+    "torch",
+    "soundfile",
+    "librosa",
+    "sentencepiece",
+    "protobuf",
+]
+
 [project.scripts]
 watson-voice = "watson_voice.__main__:main"
 

@@ -7,7 +7,7 @@ from dataclasses import dataclass
 
 @dataclass
 class Config:
-    # ASR backend: "whisper" or "voxtral"
+    # ASR backend: "whisper", "voxtral", or "cohere"
     backend: str = "whisper"
 
     # ASR model settings (for whisper backend)
@@ -59,7 +59,7 @@ def parse_args() -> Config:
     parser.add_argument(
         "--backend",
         default=Config.backend,
-        choices=["whisper", "voxtral"],
+        choices=["whisper", "voxtral", "cohere"],
         help="ASR backend (default: %(default)s)",
     )
     parser.add_argument(
@@ -101,7 +101,7 @@ def parse_args() -> Config:
     )
     args = parser.parse_args()
 
-    api_key = args.mistral_api_key or os.environ.get("MISTRAL_API_KEY", "")
+    mistral_key = args.mistral_api_key or os.environ.get("MISTRAL_API_KEY", "")
 
     return Config(
         backend=args.backend,
@@ -109,7 +109,7 @@ def parse_args() -> Config:
         device=args.device,
         compute_type=args.compute_type,
         language=args.language,
-        mistral_api_key=api_key,
+        mistral_api_key=mistral_key,
         fifo_path=args.fifo_path,
         result_fifo_path=args.result_fifo_path,
     )
