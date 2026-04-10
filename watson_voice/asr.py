@@ -49,7 +49,7 @@ class WhisperASREngine:
             language=self.config.language,
             vad_filter=True,
             vad_parameters=dict(
-                min_silence_duration_ms=500,
+                min_silence_duration_ms=1000,
             ),
         )
         texts = [segment.text.strip() for segment in segments]

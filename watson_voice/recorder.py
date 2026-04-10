@@ -12,7 +12,7 @@ from .config import Config
 
 # VAD parameters
 ENERGY_THRESHOLD = 300  # RMS energy threshold to detect speech
-SILENCE_DURATION_S = 0.5  # Seconds of silence after speech to trigger stop
+SILENCE_DURATION_S = 1.0  # Seconds of silence after speech to trigger stop
 MIN_SPEECH_DURATION_S = 0.3  # Minimum speech duration to consider valid
 
 # High-pass filter cutoff frequency (Hz) to remove wind/AC noise
