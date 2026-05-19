@@ -104,7 +104,7 @@ class VoiceInputDaemon:
             print(f"Unknown command: {cmd}")
 
     def _activate(self):
-        """Activate voice input mode - start recording with auto-detection."""
+        """Activate voice input mode - start recording."""
         self._active = True
         self._start_recording()
 
@@ -125,7 +125,7 @@ class VoiceInputDaemon:
             print("Recording cancelled.")
 
     def _start_recording(self):
-        """Start recording with silence detection."""
+        """Start recording."""
         with self._lock:
             if self._processing:
                 return
@@ -133,14 +133,7 @@ class VoiceInputDaemon:
                 self.recorder.stop()
 
         print("Recording started...")
-        self.recorder.start(on_silence=self._on_silence_detected)
-
-    def _on_silence_detected(self):
-        """Called by recorder when silence is detected after speech."""
-        print("Auto-stop triggered by silence detection.")
-        # Must not call stop()/join() from the recorder thread itself,
-        # so handle transcription in a new thread.
-        threading.Thread(target=self._do_transcribe, daemon=True).start()
+        self.recorder.start()
 
     def _stop_and_transcribe(self):
         """Stop recording and transcribe (manual stop)."""
